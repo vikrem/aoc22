@@ -1,9 +1,8 @@
-
 module Day4 where
 
+import Relude.Unsafe as U
 import Text.Parsec
 import Text.Parsec.Text
-import Relude.Unsafe as U
 
 day4 :: IO ()
 day4 = do
@@ -23,6 +22,7 @@ partTwo = countP isOverlapping
 
 countP :: (a -> Bool) -> [a] -> Int
 countP f xs = length . filter (== True) $ f <$> xs
+
 pair :: Parser (Int, Int)
 pair = do
   x <- read <$> many1 digit
