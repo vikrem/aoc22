@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 
-module Day7 where
+module Day7 () where
 
 import Data.List (iterate', minimum, nub)
 import Data.Map hiding (filter)
@@ -23,9 +23,10 @@ data Tree = DirectoryT String (Map String Tree) | FileT String Int
 day7 :: IO ()
 day7 = do
   input <- decodeUtf8 <$> readFileBS "input/day7.txt"
-  let (Right parsed) = runParser parser () "input" input
-  partOne parsed
-  partTwo parsed
+  let (Right lines) = runParser parser () "input" input
+  let (_, tree) = execState (traverse_ processLine lines) ([Directory "/"], DirectoryT "/" mempty)
+  partOne tree
+  partTwo tree
 
 parser :: Parser [Line]
 parser = parseLine `sepBy1` newline
@@ -79,9 +80,7 @@ processCmd (Cd s) = do
   (path, tree) <- get
   let path' = case s of
         "/" -> [Directory "/"]
-        ".." -> case U.init path of
-          [] -> [Directory "/"]
-          x -> x
+        ".." -> U.init path
         _ -> path ++ [Directory s]
   put (path', tree)
 
@@ -96,10 +95,8 @@ processLine :: Line -> State ([Datum], Tree) ()
 processLine (Command c) = processCmd c
 processLine (Datum d) = processDatum d
 
-partOne :: [Line] -> IO ()
-partOne lines = do
-  let x@(pwd, tree) = execState (traverse_ processLine lines) ([Directory "/"], DirectoryT "/" mempty)
-  print $ findSumsUnder100k tree
+partOne :: Tree -> IO ()
+partOne tree = print $ findSumsUnder100k tree
 
 sumTree :: Tree -> Int
 sumTree (DirectoryT _ m) = sum $ sumTree <$> elems m
@@ -116,9 +113,8 @@ findDeletionTarget :: Tree -> Int -> Int
 findDeletionTarget (FileT _ i) x = 70000000
 findDeletionTarget d@(DirectoryT _ m) t = minimum $ filter (>= t) $ sumTree d : (flip findDeletionTarget t <$> elems m)
 
-partTwo :: [Line] -> IO ()
-partTwo lines = do
-  let x@(pwd, tree) = execState (traverse_ processLine lines) ([Directory "/"], DirectoryT "/" mempty)
+partTwo :: Tree -> IO ()
+partTwo tree = do
   let used = sumTree tree
   let free = 70000000 - used
   let target = 30000000 - free
